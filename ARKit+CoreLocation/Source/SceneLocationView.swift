@@ -68,6 +68,7 @@ public class SceneLocationView: ARSCNView {
     public var currentEulerAngles: SCNVector3? { return pointOfView?.eulerAngles }
 
     public internal(set) var locationNodes = [LocationNode]()
+    public internal(set) var polylineNodes = [PolylineNode]()
 
     // MARK: Internal desclarations
     internal var didFetchInitialLocation = false
@@ -192,7 +193,8 @@ public extension SceneLocationView {
     public func addLocationNodeWithConfirmedLocation(locationNode: LocationNode) {
         if locationNode.location == nil || locationNode.locationConfirmed == false { return }
 
-        locationNode.updatePositionAndScale(setup: true, scenePosition: currentScenePosition,
+        locationNode.updatePositionAndScale(setup: true,
+                                            scenePosition: currentScenePosition,
                                             locationManager: sceneLocationManager) {
                                                 self.locationViewDelegate?
                                                     .didUpdateLocationAndScaleOfLocationNode(sceneLocationView: self,
@@ -220,6 +222,32 @@ public extension SceneLocationView {
     }
 }
 
+public extension SceneLocationView {
+    public func addRoutes(routes: [MKRoute]) {
+        guard let altitude = sceneLocationManager.currentLocation?.altitude else { return }
+        let polyNodes = routes.map { PolylineNode(polyline: $0.polyline, altitude: altitude - 2.0) }
+
+        polylineNodes.append(contentsOf: polyNodes)
+        polyNodes.forEach {
+            $0.locationNodes.forEach {
+                $0.updatePositionAndScale(setup: true,
+                                          scenePosition: currentScenePosition,
+                                          locationManager: sceneLocationManager,
+                                          onCompletion: {})
+                sceneNode?.addChildNode($0)
+            }
+        }
+    }
+
+    public func removeRoutes(routes: [MKRoute]) {
+        routes.forEach { route in
+            if let index = polylineNodes.index(where: { $0.polyline == route.polyline }) {
+                polylineNodes.remove(at: index)
+            }
+        }
+    }
+}
+
 extension SceneLocationView: SceneLocationManagerDelegate {
     var scenePosition: SCNVector3? { return currentScenePosition }
 
@@ -238,8 +266,11 @@ extension SceneLocationView: SceneLocationManagerDelegate {
 
     func updatePositionAndScaleOfLocationNodes() {
         locationNodes.filter { $0.continuallyUpdatePositionAndScale }.forEach { node in
-            node.updatePositionAndScale(scenePosition: currentScenePosition, locationManager: sceneLocationManager) {
-                self.locationViewDelegate?.didUpdateLocationAndScaleOfLocationNode(sceneLocationView: self, locationNode: node)
+            node.updatePositionAndScale(scenePosition: currentScenePosition,
+                                        locationManager: sceneLocationManager) {
+                                            self.locationViewDelegate?
+                                                .didUpdateLocationAndScaleOfLocationNode(sceneLocationView: self,
+                                                                                         locationNode: node)
             }
         }
     }
