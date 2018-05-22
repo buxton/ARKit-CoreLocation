@@ -18,6 +18,7 @@ public class SceneLocationView: ARSCNView {
     static let sceneLimit = 100.0
 
     public weak var locationViewDelegate: SceneLocationViewDelegate?
+    public weak var locationEstimateDelegate: SceneLocationViewEstimateDelegate?
 
     ///The method to use for determining locations.
     ///Not advisable to change this as the scene is ongoing.
@@ -241,6 +242,14 @@ extension SceneLocationView: SceneLocationManagerDelegate {
                 self.locationViewDelegate?.didUpdateLocationAndScaleOfLocationNode(sceneLocationView: self, locationNode: node)
             }
         }
+    }
+
+    func didAddSceneLocationEstimate(position: SCNVector3, location: CLLocation) {
+        locationEstimateDelegate?.didAddSceneLocationEstimate(sceneLocationView: self, position: position, location: location)
+    }
+
+    func didRemoveSceneLocationEstimate(position: SCNVector3, location: CLLocation) {
+        locationEstimateDelegate?.didRemoveSceneLocationEstimate(sceneLocationView: self, position: position, location: location)
     }
 }
 
